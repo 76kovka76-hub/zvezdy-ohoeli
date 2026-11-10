@@ -1,7 +1,8 @@
-import json
 import os
 import sys
 import time
+import random
+import hashlib
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -9,61 +10,89 @@ import requests
 
 VK_API = "https://api.vk.com/method"
 VK_VERSION = os.getenv("VK_API_VERSION", "5.199")
-MOSCOW = ZoneInfo("Europe/Moscow")
+TZ = ZoneInfo(os.getenv("TIMEZONE", "Europe/Moscow"))
 SIGNS = [
     "Овен", "Телец", "Близнецы", "Рак", "Лев", "Дева",
     "Весы", "Скорпион", "Стрелец", "Козерог", "Водолей", "Рыбы",
 ]
 
+OPENERS = [
+    "Вселенная сегодня опять нажала не ту кнопку.",
+    "Планеты собрались на созвон и решили потрепать тебе нервы.",
+    "Космос шлёт знак. Похоже, опять без инструкции.",
+    "Сегодня у судьбы режим «а давай посмотрим, что будет».",
+    "Звёзды посмотрели на твои планы и нервно закурили.",
+    "Меркурий где-то потерял инструкцию, так что держись.",
+    "Небо намекает: день будет с сюрпризами, блядь.",
+    "Астрологическая обстановка — как понедельник, только без уважительной причины.",
+]
+SITUATIONS = [
+    "В делах не хватайся за всё сразу: выбери одну задачу и добей её, а остальное пусть пока полежит и подумает о своём поведении.",
+    "В общении не пытайся читать мысли людей. Спроси прямо — телепатия сегодня опять на техобслуживании.",
+    "Деньги любят счёт, а не импульсивное «да ладно, живём один раз». Перед покупкой выдохни и посмотри на цену.",
+    "Если кто-то начнёт качать права, не устраивай бесплатный спектакль. Спокойствие сегодня дороже чужого цирка.",
+    "Не откладывай мелкое дело на вечер: вечером ты захочешь только лежать и смотреть в потолок.",
+    "В работе пригодится чувство юмора. Особенно когда очередной гениальный план внезапно окажется хернёй.",
+    "Не обещай всем всё на свете. У тебя не филиал службы спасения, а обычный человеческий день.",
+    "Случайная встреча или сообщение может поднять настроение. Только не делай из одного смайлика свадебный прогноз.",
+    "Наведи порядок хотя бы в одной вещи: на столе, в голове или в списке дел. Начни с того, что меньше бесит.",
+    "Не спорь ради победы. Иногда лучший аргумент — «ладно, живи со своей версией» и чашка чая.",
+    "Устрой себе паузу до того, как организм сам выключит тебя в режиме аварийного питания.",
+    "День подходит для маленького шага, а не для героического прыжка в неизвестность без парашюта.",
+]
+MOODS = [
+    "Твой козырь — внезапная находчивость.",
+    "Главное оружие — выдержка, даже если внутри уже матерный оркестр.",
+    "Удача любит тех, кто сначала проверяет, куда нажимает.",
+    "Неожиданно сработает простое решение, а не очередная гениальная схема.",
+    "Твоя суперсила сегодня — вовремя сказать «нет».",
+    "Не драматизируй: часть проблем рассосётся после еды и нормального сна.",
+    "Будь гибче, но не превращайся в коврик у чужой двери.",
+    "Хороший день, чтобы перестать усложнять то, что и так понятно.",
+]
+ADVICE = [
+    "Совет звёзд: не принимай важных решений на голодный желудок.",
+    "Рецепт дня: меньше суеты, больше здравого смысла и нормального кофе.",
+    "Не геройствуй там, где можно просто попросить помощи.",
+    "Оставь себе время на отдых — ты не вечный двигатель, ёб твою астрологию.",
+    "Проверь факты, прежде чем верить красивым обещаниям.",
+    "Сделай одно полезное дело и похвали себя, а не ищи новый повод ругать.",
+    "Если всё идёт не по плану, поменяй план, а не собственную нервную систему.",
+    "Не трать силы на людей, которые питаются чужими эмоциями.",
+]
+SIGN_FLAVOR = {
+    "Овен": "Твоя скорость сегодня впечатляет, но тормоза тоже придумали не просто так.",
+    "Телец": "Комфорт важен, но диван не обязан решать за тебя все жизненные вопросы.",
+    "Близнецы": "Идей будет столько, что даже внутренний чат попросит отключить уведомления.",
+    "Рак": "Береги личные границы: панцирь нужен не для того, чтобы туда набивались все подряд.",
+    "Лев": "Сияй, но не требуй аплодисментов от каждого встречного чайника.",
+    "Дева": "Не пытайся исправить весь мир до обеда. У мира даже гарантийного талона нет.",
+    "Весы": "Выбор можно сделать без комиссии из семи советчиков и трёх знаков свыше.",
+    "Скорпион": "Твоя проницательность сильна, но иногда человек просто устал, а не строит заговор.",
+    "Стрелец": "Авантюры манят, но сначала проверь адрес и заряд телефона.",
+    "Козерог": "Амбиции амбициями, а перерыв на обед никто не отменял.",
+    "Водолей": "Твои идеи опережают время; попробуй для начала объяснить их обычным людям.",
+    "Рыбы": "Мечтать прекрасно, но поставь напоминание вернуться на Землю и оплатить счета.",
+}
 
-def require_env(name: str) -> str:
-    value = os.getenv(name, "").strip()
-    if not value:
-        raise RuntimeError(f"Не задана переменная окружения {name}")
-    return value
-
-
-def generate_horoscopes(api_key: str, model: str, date_text: str) -> dict[str, str]:
-    prompt = f"""
-Напиши 12 отдельных развлекательных гороскопов на дату {date_text}, по одному для каждого знака:
-{", ".join(SIGNS)}.
-
-Стиль паблика «Звёзды охуели»: дерзкий, смешной, разговорный русский язык,
-обильный, но естественный мат; без оскорблений по защищённым признакам,
-без угроз и без опасных медицинских/финансовых советов.
-Каждый текст 450–650 знаков, уникальный по смыслу и формулировкам.
-В каждом: короткий цепляющий заход, прогноз на день, конкретный смешной совет.
-Не утверждай, что это реальные предсказания: это юмор и развлечение.
-Верни только корректный JSON-объект, где ключи — названия знаков из списка,
-а значения — готовые тексты постов. Не добавляй Markdown и пояснения.
-"""
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={
-            "model": model,
-            "temperature": 1,
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": "Ты автор юмористического русскоязычного паблика."},
-                {"role": "user", "content": prompt},
-            ],
-        },
-        timeout=120,
-    )
-    response.raise_for_status()
-    data = response.json()
-    content = data["choices"][0]["message"]["content"]
-    result = json.loads(content)
-    missing = [sign for sign in SIGNS if not isinstance(result.get(sign), str) or not result[sign].strip()]
-    if missing:
-        raise RuntimeError("ИИ не вернул тексты для знаков: " + ", ".join(missing))
-    return {sign: result[sign].strip() for sign in SIGNS}
-
+def horoscope(sign: str, day: str) -> str:
+    seed = int(hashlib.sha256(f"{day}:{sign}".encode()).hexdigest()[:16], 16)
+    rng = random.Random(seed)
+    parts = [
+        rng.choice(OPENERS),
+        SIGN_FLAVOR[sign],
+        rng.choice(SITUATIONS),
+        rng.choice(MOODS),
+        rng.choice(ADVICE),
+    ]
+    return "\n\n".join(parts)
 
 def vk_call(token: str, method: str, params: dict) -> dict:
-    payload = {**params, "access_token": token, "v": VK_VERSION}
-    response = requests.post(f"{VK_API}/{method}", data=payload, timeout=30)
+    response = requests.post(
+        f"{VK_API}/{method}",
+        data={**params, "access_token": token, "v": VK_VERSION},
+        timeout=30,
+    )
     response.raise_for_status()
     data = response.json()
     if "error" in data:
@@ -71,51 +100,50 @@ def vk_call(token: str, method: str, params: dict) -> dict:
         raise RuntimeError(f"VK API {error.get('error_code')}: {error.get('error_msg')}")
     return data["response"]
 
-
 def main() -> None:
     if os.getenv("PUBLISH_ENABLED", "false").lower() != "true":
-        print("Защита включена: PUBLISH_ENABLED не равен true. Публикации не отправлены.")
+        print("Защита включена: PUBLISH_ENABLED не равен true. Публикаций нет.")
         return
 
-    token = require_env("VK_ACCESS_TOKEN")
-    group_id = int(require_env("VK_GROUP_ID"))
-    openai_key = require_env("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+    token = os.getenv("VK_ACCESS_TOKEN", "").strip()
+    group_id = os.getenv("VK_GROUP_ID", "243138653").strip()
+    if not token:
+        raise RuntimeError("Не задан VK_ACCESS_TOKEN в секретах GitHub.")
+    if not group_id.isdigit():
+        raise RuntimeError("VK_GROUP_ID должен быть числом без club.")
 
-    now = datetime.now(MOSCOW)
-    publish_day = now.date() + timedelta(days=1)
-    date_text = publish_day.strftime("%d.%m.%Y")
-    horoscopes = generate_horoscopes(openai_key, model, date_text)
-
-    # 09:00–20:00 по Москве: один пост в час, отдельно для каждого знака.
+    # Запуск в 09:00 по Москве: готовим отложенные посты на сегодняшний день.
+    today = datetime.now(TZ).date()
+    date_text = today.strftime("%d.%m.%Y")
     for index, sign in enumerate(SIGNS):
         publish_at = datetime(
-            publish_day.year, publish_day.month, publish_day.day,
-            9 + index, 0, tzinfo=MOSCOW
+            today.year, today.month, today.day,
+            9 + index, 0, tzinfo=TZ
         )
+        # Если workflow стартовал с задержкой после времени публикации,
+        # не ставим пост в прошлое — переносим его на ближайшую минуту.
+        now = datetime.now(TZ)
+        if publish_at <= now:
+            publish_at = now + timedelta(minutes=2)
+
+        text = horoscope(sign, today.isoformat())
         message = (
-            f"♈️ ГОРОСКОП НА {date_text}\n"
+            f"🔮 ГОРОСКОП НА {date_text}\n"
             f"ЗНАК: {sign.upper()}\n\n"
-            f"{horoscopes[sign]}\n\n"
-            "🔮 «Звёзды охуели» — юмор, а не руководство к жизни."
+            f"{text}\n\n"
+            "«Звёзды охуели» — юмор, а не руководство к жизни."
         )
-        vk_call(
-            token,
-            "wall.post",
-            {
-                "owner_id": -group_id,
-                "from_group": 1,
-                "message": message,
-                "publish_date": int(publish_at.timestamp()),
-                # Стабильный GUID снижает риск повторной постановки того же поста.
-                "guid": f"zvezdy-{publish_day.isoformat()}-{index + 1}",
-            },
-        )
+        vk_call(token, "wall.post", {
+            "owner_id": -int(group_id),
+            "from_group": 1,
+            "message": message,
+            "publish_date": int(publish_at.timestamp()),
+            "guid": f"zvezdy-{today.isoformat()}-{index + 1}",
+        })
         print(f"Запланирован пост: {sign}, {publish_at.isoformat()}")
-        time.sleep(0.35)
+        time.sleep(0.5)
 
-    print(f"Готово: запланировано 12 постов на {date_text}.")
-
+    print(f"Готово: обработано 12 знаков на {date_text}.")
 
 if __name__ == "__main__":
     try:
