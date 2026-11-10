@@ -116,6 +116,16 @@ def main() -> None:
         print("Проверка завершена. Стена не читалась, публикаций и изменений нет.")
         return
 
+    today = datetime.now(TZ).date()
+
+    # Предпросмотр формирует все тексты, но не обращается к VK API.
+    if os.getenv("PREVIEW_ONLY", "false").lower() == "true":
+        for sign in SIGNS:
+            print("=" * 60)
+            print(post_message(sign, today))
+        print(f"Предпросмотр завершён: сформировано 12 гороскопов на {today:%d.%m.%Y}. Публикаций нет.")
+        return
+
     if os.getenv("PUBLISH_ENABLED", "false").lower() != "true":
         print("Защита включена: PUBLISH_ENABLED не равен true. Публикаций нет.")
         return
@@ -125,27 +135,13 @@ def main() -> None:
     if not group_id.isdigit():
         raise RuntimeError("VK_GROUP_ID должен быть числом без club.")
 
-    # Запуск в 09:00 по Москве: готовим отложенные посты на сегодняшний день.
-    today = datetime.now(TZ).date()
-    date_text = today.strftime("%d.%m.%Y")
+    # Планируем посты каждый час, начиная с 09:00. Если Actions опоздал,
+    # сдвигаем всю серию целиком, сохраняя часовой интервал и порядок знаков.
+    first_slot = datetime(today.year, today.month, today.day, 9, 0, tzinfo=TZ)
+    first_publish = max(first_slot, datetime.now(TZ) + timedelta(minutes=2))
     for index, sign in enumerate(SIGNS):
-        publish_at = datetime(
-            today.year, today.month, today.day,
-            9 + index, 0, tzinfo=TZ
-        )
-        # Если workflow стартовал с задержкой после времени публикации,
-        # не ставим пост в прошлое — переносим его на ближайшую минуту.
-        now = datetime.now(TZ)
-        if publish_at <= now:
-            publish_at = now + timedelta(minutes=2)
-
-        text = horoscope(sign, today.isoformat())
-        message = (
-            f"🔮 ГОРОСКОП НА {date_text}\n"
-            f"ЗНАК: {sign.upper()}\n\n"
-            f"{text}\n\n"
-            "«Звёзды охуели» — юмор, а не руководство к жизни."
-        )
+        publish_at = first_publish + timedelta(hours=index)
+        message = post_message(sign, today)
         vk_call(token, "wall.post", {
             "owner_id": -int(group_id),
             "from_group": 1,
