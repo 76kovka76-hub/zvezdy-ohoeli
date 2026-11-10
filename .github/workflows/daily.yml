@@ -30,7 +30,7 @@ jobs:
     env:
       VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
       VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
-      PUBLISH_ENABLED: ${{ vars.PUBLISH_ENABLED }}
+      PUBLISH_ENABLED: "true"
       VK_CHECK_ONLY: ${{ inputs.check_vk_access }}
       PREVIEW_ONLY: ${{ inputs.preview_horoscopes }}
       TIMEZONE: Europe/Moscow
