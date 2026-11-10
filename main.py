@@ -87,6 +87,17 @@ def horoscope(sign: str, day: str) -> str:
     ]
     return "\n\n".join(parts)
 
+def post_message(sign: str, day) -> str:
+    date_text = day.strftime("%d.%m.%Y")
+    text = horoscope(sign, day.isoformat())
+    return (
+        f"🔮 ГОРОСКОП НА {date_text}\\n"
+        f"ЗНАК: {sign.upper()}\\n\\n"
+        f"{text}\\n\\n"
+        "«Звёзды охуели» — юмор, а не руководство к жизни."
+    )
+
+
 def vk_call(token: str, method: str, params: dict) -> dict:
     response = requests.post(
         f"{VK_API}/{method}",
@@ -152,7 +163,7 @@ def main() -> None:
         print(f"Запланирован пост: {sign}, {publish_at.isoformat()}")
         time.sleep(0.5)
 
-    print(f"Готово: обработано 12 знаков на {date_text}.")
+    print(f"Готово: обработано 12 знаков на {today:%d.%m.%Y}.")
 
 if __name__ == "__main__":
     try:
