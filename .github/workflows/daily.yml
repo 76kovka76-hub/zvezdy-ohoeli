@@ -4,17 +4,6 @@ on:
   schedule:
     - cron: "45 5 * * *"
   workflow_dispatch:
-    inputs:
-      check_vk_access:
-        description: "Проверить токен и доступность сообщества без публикации"
-        required: false
-        type: boolean
-        default: false
-      preview_horoscopes:
-        description: "Сформировать и показать 12 гороскопов без обращения к ВК"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -31,8 +20,8 @@ jobs:
       VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
       VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
       PUBLISH_ENABLED: "true"
-      VK_CHECK_ONLY: ${{ inputs.check_vk_access }}
-      PREVIEW_ONLY: ${{ inputs.preview_horoscopes }}
+      VK_CHECK_ONLY: "false"
+      PREVIEW_ONLY: "false"
       TIMEZONE: Europe/Moscow
     steps:
       - name: Check out repository
