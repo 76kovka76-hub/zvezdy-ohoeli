@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       check_vk_access:
-        description: "Проверить токен и чтение стены ВК без публикации"
+        description: "Проверить токен и доступность сообщества без публикации"
         required: false
         type: boolean
         default: false
@@ -27,6 +27,7 @@ jobs:
       VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
       PUBLISH_ENABLED: ${{ vars.PUBLISH_ENABLED }}
       VK_CHECK_ONLY: ${{ inputs.check_vk_access }}
+      PREVIEW_ONLY: ${{ inputs.preview_horoscopes }}
       TIMEZONE: Europe/Moscow
     steps:
       - name: Check out repository
