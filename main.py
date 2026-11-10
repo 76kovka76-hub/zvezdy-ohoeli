@@ -101,12 +101,30 @@ def vk_call(token: str, method: str, params: dict) -> dict:
     return data["response"]
 
 def main() -> None:
+    token = os.getenv("VK_ACCESS_TOKEN", "").strip()
+    group_id = os.getenv("VK_GROUP_ID", "243138653").strip()
+
+    # Отдельный режим только для чтения: никаких публикаций и изменений в ВК.
+    if os.getenv("VK_CHECK_ONLY", "false").lower() == "true":
+        if not token:
+            raise RuntimeError("Не задан VK_ACCESS_TOKEN в секретах GitHub.")
+        if not group_id.isdigit():
+            raise RuntimeError("VK_GROUP_ID должен быть числом без club.")
+        group_data = vk_call(token, "groups.getById", {"group_id": group_id})
+        wall_data = vk_call(token, "wall.get", {
+            "owner_id": -int(group_id),
+            "count": 1,
+        })
+        group = group_data[0] if isinstance(group_data, list) else group_data
+        print(f"Токен принят. Группа доступна: {group.get('name', group_id)}.")
+        print(f"Чтение стены успешно. Записей получено: {wall_data.get('count', 0)}.")
+        print("Режим проверки завершён. Ничего не опубликовано и не изменено.")
+        return
+
     if os.getenv("PUBLISH_ENABLED", "false").lower() != "true":
         print("Защита включена: PUBLISH_ENABLED не равен true. Публикаций нет.")
         return
 
-    token = os.getenv("VK_ACCESS_TOKEN", "").strip()
-    group_id = os.getenv("VK_GROUP_ID", "243138653").strip()
     if not token:
         raise RuntimeError("Не задан VK_ACCESS_TOKEN в секретах GitHub.")
     if not group_id.isdigit():
