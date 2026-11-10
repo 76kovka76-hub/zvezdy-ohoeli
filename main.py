@@ -91,9 +91,9 @@ def post_message(sign: str, day) -> str:
     date_text = day.strftime("%d.%m.%Y")
     text = horoscope(sign, day.isoformat())
     return (
-        f"🔮 ГОРОСКОП НА {date_text}\\n"
-        f"ЗНАК: {sign.upper()}\\n\\n"
-        f"{text}\\n\\n"
+        f"🔮 ГОРОСКОП НА {date_text}\n"
+        f"ЗНАК: {sign.upper()}\n\n"
+        f"{text}\n\n"
         "«Звёзды охуели» — юмор, а не руководство к жизни."
     )
 
