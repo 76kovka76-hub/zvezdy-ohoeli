@@ -16,6 +16,6 @@ services:
       - key: PUBLISH_ENABLED
         value: "false"
       - key: OPENAI_MODEL
-        value: "gpt-4.1-mini"
+        value: "gpt-5.4-mini"
       - key: VK_API_VERSION
         value: "5.199"
