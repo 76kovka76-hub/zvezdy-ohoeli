@@ -80,7 +80,7 @@ def main() -> None:
     token = require_env("VK_ACCESS_TOKEN")
     group_id = int(require_env("VK_GROUP_ID"))
     openai_key = require_env("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    model = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 
     now = datetime.now(MOSCOW)
     publish_day = now.date() + timedelta(days=1)
