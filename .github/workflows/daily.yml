@@ -2,7 +2,7 @@ name: Daily VK horoscopes
 
 on:
   schedule:
-    - cron: "45 5 * * *"
+    - cron: "45 4 * * *"
   workflow_dispatch:
 
 permissions:
