@@ -32,5 +32,7 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Check message format and duplicate protection
+        run: python -m unittest -v test_main.py
       - name: Run publisher
         run: python main.py

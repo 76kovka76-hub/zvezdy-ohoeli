@@ -1,0 +1,28 @@
+name: Test horoscope bot
+
+on:
+  push:
+    paths:
+      - "main.py"
+      - "test_main.py"
+      - ".github/workflows/tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Dependencies
+        run: pip install -r requirements.txt
+      - name: Unit tests without VK access
+        run: python -m unittest -v test_main.py
